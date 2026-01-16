@@ -5,11 +5,11 @@
 
 The purpose of this project is to find all the supported and missing SystemVerilog features in various Verilog tools.
 
-The report generated from the last passing master build can be viewed [on a dedicated dashboard:](https://chipsalliance.github.io/sv-tests-results/)
-[![Grid](./img/sv-test-grid.png)](https://chipsalliance.github.io/sv-tests-results/)
+The report generated from the last passing master build can be viewed [on a dedicated dashboard:](https://silimate.github.io/sv-tests-results/)
+[![Grid](./img/sv-test-grid.png)](https://silimate.github.io/sv-tests-results/)
 
-History of the builds is also tracked and can be seen [on a separate page:](https://chipsalliance.github.io/sv-tests-results/history)
-[![History](./img/sv-test-history.png)](https://chipsalliance.github.io/sv-tests-results/history)
+History of the builds is also tracked and can be seen [on a separate page:](https://silimate.github.io/sv-tests-results/history)
+[![History](./img/sv-test-history.png)](https://silimate.github.io/sv-tests-results/history)
 
 # Running
 
@@ -94,18 +94,45 @@ Finally the file containing the test case and metadata should be placed in `test
 
    If the new tool is a Python library, reimplement `run` and other supporting methods instead of implementing `prepare_run_cb`.
 
-## Supported tools
+## Supported open-source tools
 
-* [Yosys](https://github.com/yosysHQ/yosys)
-* [Odin II](https://verilogtorouting.org)
-* [Verilator](https://verilator.org)
-* [Icarus](http://iverilog.icarus.com)
-* [slang](https://github.com/MikePopoloski/slang)
-* [sv2v(zachjs)](https://github.com/zachjs/sv2v)
-* [tree-sitter-systemverilog](https://github.com/gmlarumbe/tree-sitter-systemverilog)
-* [tree-sitter-verilog](https://github.com/tree-sitter/tree-sitter-verilog)
-* [sv-parser](https://github.com/dalance/sv-parser)
-* [moore](http://llhd.io)
-* [verible](https://github.com/google/verible)
-* [circt-verilog](https://github.com/llvm/circt)
-* [yosys-slang](https://github.com/povik/yosys-slang)
+### Parsing/Linting
+- [x] [slang](https://github.com/MikePopoloski/slang)
+- [x] [surelog](https://github.com/chipsalliance/Surelog)
+- [x] [verible](https://github.com/google/verible)
+
+### Synthesis
+- [x] [synlig](https://github.com/chipsalliance/synlig)
+- [x] [yosys](https://github.com/silimate/yosys)
+- [x] [yosys-slang](https://github.com/povik/yosys-slang)
+
+### Simulation
+- [x] [iverilog](https://github.com/steveicarus/iverilog.git)
+- [x] [verilator](https://github.com/verilator/verilator)
+
+## Supported closed-source tools (TODO)
+
+### Parse/Lint
+- [ ] [verific](https://github.com/silimate/verific)
+
+### Synthesis
+- [ ] [preqorsor](https://github.com/silimate/preqorsor)
+- [ ] [yosys-verific](https://github.com/silimate/yosys)
+
+## Removed open-source tools
+
+### Parsing/Linting
+- ~~[sv-parser](https://github.com/dalance/sv-parser)~~
+- ~~[tree-sitter-verilog](https://github.com/tree-sitter/tree-sitter-verilog)~~
+- ~~[tree-sitter-systemverilog](https://github.com/gmlarumbe/tree-sitter-systemverilog)~~
+
+### Synthesis
+- ~~[sv2v](https://github.com/zachjs/sv2v)~~
+
+### Simulation
+- ~~[verilator-uhdm](https://github.com/antmicro/verilator)~~
+
+### Other
+- ~~[odin_ii](https://github.com/verilog-to-routing/vtr-verilog-to-routing.git)~~
+- ~~[circt-verilog](https://github.com/llvm/circt)~~
+- ~~[moore](http://llhd.io)~~

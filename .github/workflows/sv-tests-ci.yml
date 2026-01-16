@@ -16,46 +16,30 @@ jobs:
       matrix:
         tool:
           - name: icarus
-            deps: autoconf autotools-dev bison flex libfl-dev gperf
-          - name: moore
-            rust_ver: "1.61"
-          - name: odin
-            repo: odin_ii
-            deps: autoconf autotools-dev bison flex libfl-dev cmake pkg-config
+            deps: autoconf autotools-dev bison flex libfl-dev gperf clang
           - name: slang
-            deps: cmake pkg-config
-          - name: surelog
-            repo: Surelog
-            submodules: third_party/UHDM third_party/antlr4 third_party/googletest
-            deps: cmake default-jre pkg-config tclsh uuid-dev
-          - name: sv-parser
-            deps: cargo
-            rust_ver: "1.81"
-          - name: tree-sitter-systemverilog
-            deps: gcc
-          - name: tree-sitter-verilog
-            deps: gcc
+            deps: cmake pkg-config clang
+          # - name: surelog
+          #   repo: Surelog
+          #   submodules: third_party/UHDM third_party/antlr4 third_party/googletest
+          #   deps: cmake default-jre pkg-config tclsh uuid-dev
           - name: verible
-            deps: bazel=7.6.1 bison flex libfl-dev
+            deps: bazel=7.6.1 bison flex libfl-dev clang
+            runners_filter: Verible
             skip-ccache: 1
           - name: verilator
-            deps: autoconf autotools-dev bison flex help2man libfl-dev libelf-dev
+            deps: autoconf autotools-dev bison flex help2man libfl-dev libelf-dev clang
             make_jobs_max: 4
           - name: yosys
             deps: bison clang tcl-dev flex libfl-dev pkg-config libreadline-dev
-          - name: yosys-synlig
-            repo: synlig
-            submodules: third_party/yosys third_party/surelog
-            deps: cmake clang tcl-dev bison default-jre flex libfl-dev libreadline-dev pkg-config tclsh uuid-dev
-            runners_filter: SynligYosys
-          - name: zachjs-sv2v
-            deps: haskell-stack
           - name: yosys-slang
             deps: bison clang tcl-dev flex libfl-dev pkg-config libreadline-dev cmake pkg-config
-            submodules: third_party/slang
-          - name: circt-verilog
-            deps: cmake clang ninja-build lld
-            submodules: llvm
+            submodules: third_party/slang third_party/fmt
+          # - name: yosys-synlig
+          #   repo: synlig
+          #   submodules: third_party/yosys third_party/surelog
+          #   deps: cmake clang tcl-dev bison default-jre flex libfl-dev libreadline-dev pkg-config tclsh uuid-dev
+          #   runners_filter: SynligYosys
     env:
       RUNNERS_FILTER: ${{ matrix.tool.runners_filter }}
       CCACHE_DIR: "/root/sv-tests/sv-tests/.cache/"
@@ -66,21 +50,26 @@ jobs:
       GHA_MACHINE_TYPE: "n2-highmem-16"
 
     name: ${{ matrix.tool.name }}
-    runs-on: [self-hosted, Linux, X64, gcp-custom-runners]
-    container: ubuntu:jammy-20221130
+    runs-on: [ubuntu-latest]
+    # runs-on: [self-hosted, Linux, X64, gcp-custom-runners]
+    container: ubuntu:latest
     steps:
-      - name: Cancel previous
-        uses: styfle/cancel-workflow-action@0.8.0
-        with:
-          access_token: ${{ github.token }}
+      # - name: Cancel previous
+      #   uses: styfle/cancel-workflow-action@0.8.0
+      #   with:
+      #     access_token: ${{ github.token }}
       - name: Show shell
         run: |
           echo "$SHELL"
-      - name: Checkout code
-        uses: actions/checkout@v2
-      - name: Update apt repos
+      - name: Update apt repos and install git
         run: |
           apt-get update -qq
+          apt install -y git
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Fix git safe directory
+        run: |
+          git config --global --add safe.directory ${{ github.workspace }}
       - name: Setup Node
         run: |
           apt -qq -y install curl
@@ -98,13 +87,12 @@ jobs:
           mv bazel.gpg /etc/apt/trusted.gpg.d/
           echo "deb [arch=amd64] https://storage.googleapis.com/bazel-apt stable jdk1.8" | tee /etc/apt/sources.list.d/bazel.list
           apt-get update -qq
+          apt -qq -y install bazel-7.6.0
       - name: Install common dependencies
         run: |
           apt install -y python3 python3-pip git wget file
-          update-alternatives --install /usr/bin/python python /usr/bin/python3 1
-          update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 1
-          pip install --upgrade setuptools
-          pip install -r conf/requirements.txt
+          pip install --break-system-packages --upgrade setuptools
+          pip install --break-system-packages -r conf/requirements.txt
       - name: Install VeeR dependencies
         run: |
           apt install -y cpanminus
@@ -130,7 +118,11 @@ jobs:
         if: ${{ contains(matrix.tool.deps, 'haskell') }}
         run: |
           stack upgrade
+      - name: Fix git safe directory
+        run: |
+          git config --global --add safe.directory /__w/sv-tests/sv-tests
       - name: Checkout the tool submodule
+        shell: bash
         run: |
           # Github dropped support for unauthorized git: https://github.blog/2021-09-01-improving-git-protocol-security-github/
           # Make sure we always use https:// instead of git://
@@ -166,6 +158,7 @@ jobs:
           key: cache_${{ matrix.tool.name }}_${{ steps.cache_timestamp.outputs.time }}
           restore-keys: cache_${{ matrix.tool.name }}_
       - name: Build
+        shell: bash
         run: |
           export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
           [[ -f $HOME/.cargo/env ]] && source $HOME/.cargo/env
@@ -202,31 +195,32 @@ jobs:
 
   Summary:
     name: Summary
-    runs-on: [self-hosted, Linux, X64, gcp-custom-runners]
-    container: ubuntu:jammy-20221130
+    runs-on: [ubuntu-latest]
+    # runs-on: [self-hosted, Linux, X64, gcp-custom-runners]
+    container: ubuntu:latest
     needs: Run
     env:
-      ANALYZER: "$PWD/tools/report_analyzer.py"
-      GRAPHER: "$PWD/tools/history-graph"
-      OUT_REPORT_DIR: "$PWD/out/report/"
-      COMPARE_REPORT: "$OUT_REPORT_DIR/report.csv"
-      REPORTS_HISTORY: "$(mktemp -d --suffix='.history')"
-      BASE_REPORT: "$REPORTS_HISTORY/report.csv"
-      CHANGES_SUMMARY_JSON: "$OUT_REPORT_DIR/tests_summary.json"
-      CHANGES_SUMMARY_MD: "$OUT_REPORT_DIR/tests_summary.md"
+      ANALYZER: "./tools/report_analyzer.py"
+      GRAPHER: "./tools/history-graph"
+      OUT_REPORT_DIR: "./out/report/"
+      COMPARE_REPORT: "./out/report/report.csv"
+      CHANGES_SUMMARY_JSON: "./out/report/tests_summary.json"
+      CHANGES_SUMMARY_MD: "./out/report/tests_summary.md"
       TESTS_SUMMARY_DIR: "tests_summary/"
       DEBIAN_FRONTEND: "noninteractive"
     steps:
+      - name: Update apt repos and install git
+        run: |
+          apt-get update -qq
+          apt install -y git
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Setup python
         run: |
           apt-get update -qq
           apt install -y python3 python3-pip wget git curl jq
-          update-alternatives --install /usr/bin/python python /usr/bin/python3 1
-          update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 1
-          pip install --upgrade setuptools
-          pip install -r conf/requirements.txt
+          pip install --break-system-packages --upgrade setuptools
+          pip install --break-system-packages -r conf/requirements.txt
       - name: Install VeeR dependencies
         run: |
           apt install -y cpanminus
@@ -240,6 +234,9 @@ jobs:
       - name: Extract
         run: |
           for file in $(find out/ -name *.tar -print); do tar -xf $file --strip-components=2 -C $(dirname $file); done
+      - name: Fix git safe directory
+        run: |
+          git config --global --add safe.directory /__w/sv-tests/sv-tests
       - name: Checkout third party tests and cores
         run: |
           # take verilator from github
@@ -256,15 +253,17 @@ jobs:
           ./.github/workflows/report.sh
       - name: Update sv-tests-results repository
         if: github.ref == 'refs/heads/master'
+        shell: bash
         run: |
           eval $(ssh-agent -s)
           ssh-add - <<< "${{ secrets.REPORT_DEPLOY_KEY }}"
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts
+          git config --global core.sshCommand 'ssh -o StrictHostKeyChecking=no'
           ./.github/workflows/update_report.sh
       - name: Prepare artifacts for PR commenter
         if: github.event_name == 'pull_request'
+        shell: bash
         run: |
           mkdir $TESTS_SUMMARY_DIR
           echo ${{ github.event.number }} > $TESTS_SUMMARY_DIR/issue_num

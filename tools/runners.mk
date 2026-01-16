@@ -128,7 +128,6 @@ $(RDIR)/moore/Cargo.lock: $(CDIR)/runners/Cargo.lock
 verible:
 	cd $(RDIR)/verible/ && bazel build :install-binaries --noshow_progress --//bazel:use_local_flex_bison -c opt
 	cd $(RDIR)/verible/ && .github/bin/simple-install.sh $(INSTALL_DIR)/bin
-	cd $(RDIR)/verible/ && bazel shutdown
 
 $(INSTALL_DIR)/bin/verible-verilog-kythe-extractor: verible
 
@@ -165,6 +164,6 @@ $(INSTALL_DIR)/bin/circt-verilog:
 	$(MAKE) -C $(RDIR)/circt-verilog/build install-circt-verilog
 
 # setup the dependencies
-RUNNERS_TARGETS := odin yosys icarus verilator slang zachjs-sv2v tree-sitter-systemverilog tree-sitter-verilog sv-parser moore verible surelog yosys-synlig circt-verilog
+RUNNERS_TARGETS := yosys icarus verilator slang verible yosys-slang
 .PHONY: $(RUNNERS_TARGETS)
 runners: $(RUNNERS_TARGETS)
